@@ -1249,8 +1249,8 @@
                     netAmt,
                     totalTcs,
                     "",
-                    pymtDate,
-                    debitAccNo
+                    "",
+                    ""
                 ]);
             }
 
@@ -1377,8 +1377,8 @@
                         netAmt,
                         totalTcs,
                         "",
-                        pymtDate,
-                        debitAccNo
+                        "",
+                        ""
                     ]);
                 }
 
