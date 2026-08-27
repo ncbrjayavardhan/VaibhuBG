@@ -1,0 +1,9 @@
+<Context>
+  <!-- Define a JNDI DataSource for this webapp. Tomcat will bind it under java:comp/env/jdbc/UppclDS
+       Make sure the Oracle JDBC driver (e.g., ojdbc8.jar) is available in Tomcat's lib or WEB-INF/lib. -->
+  <Resource name="jdbc/UppclDS" auth="Container" type="javax.sql.DataSource"
+            driverClassName="oracle.jdbc.driver.OracleDriver"
+            url="jdbc:oracle:thin:@192.168.0.69:1521:orcl"
+            username="uppcltest" password="uppcltest"
+            maxTotal="20" maxIdle="10" maxWaitMillis="10000"/>
+</Context>
