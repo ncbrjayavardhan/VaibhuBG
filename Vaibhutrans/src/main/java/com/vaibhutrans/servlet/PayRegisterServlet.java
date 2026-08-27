@@ -1,0 +1,227 @@
+package com.vaibhutrans.servlet;
+
+import com.google.gson.Gson;
+import com.vaibhutrans.config.DBConnection;
+import com.vaibhutrans.dao.PayRegisterDAO;
+
+import javax.servlet.ServletException;
+import javax.servlet.annotation.MultipartConfig;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.Part;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintWriter;
+import java.sql.Connection;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+@WebServlet("/pay-register")
+@MultipartConfig(
+        maxFileSize = 50 * 1024 * 1024,
+        maxRequestSize = 60 * 1024 * 1024
+)
+public class PayRegisterServlet extends HttpServlet {
+
+    private static final long serialVersionUID = 1L;
+    private final PayRegisterDAO dao = new PayRegisterDAO();
+
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        String action = request.getParameter("action");
+        if ("getMasterData".equals(action)) {
+            fetchMasterDataJson(request, response);
+        } else {
+            loadRecords(request, response);
+        }
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        String action = request.getParameter("action");
+        if ("upload".equals(action)) {
+            uploadExcel(request, response);
+        } else {
+            loadRecords(request, response);
+        }
+    }
+
+    private void fetchMasterDataJson(HttpServletRequest request, HttpServletResponse response) 
+            throws IOException {
+        response.setContentType("application/json;charset=UTF-8");
+        PrintWriter out = response.getWriter();
+
+        String cluster = request.getParameter("cluster");
+        String month = request.getParameter("month");
+        String year = request.getParameter("year");
+
+        try (Connection con = DBConnection.getConnection()) {
+            List<Map<String, Object>> masterRecords = dao.getRecords(
+                con, 
+                cluster, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null,
+                month, 
+                year
+            );
+            out.print(new Gson().toJson(masterRecords));
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            out.print("{\"error\":\"" + e.getMessage() + "\"}");
+        }
+    }
+
+    private void uploadExcel(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        try {
+            String cluster = request.getParameter("uploadCluster");
+            String month = request.getParameter("uploadMonth");
+            String yearString = request.getParameter("uploadYear");
+            Part filePart = request.getPart("excelFile");
+
+            if (cluster == null || cluster.trim().isEmpty()) {
+                request.setAttribute("error", "Please select cluster.");
+                request.getRequestDispatcher("/payregister_upload.jsp").forward(request, response);
+                return;
+            }
+
+            if (month == null || month.trim().isEmpty()) {
+                request.setAttribute("error", "Please select month.");
+                request.getRequestDispatcher("/payregister_upload.jsp").forward(request, response);
+                return;
+            }
+
+            if (yearString == null || yearString.trim().isEmpty()) {
+                request.setAttribute("error", "Please select year.");
+                request.getRequestDispatcher("/payregister_upload.jsp").forward(request, response);
+                return;
+            }
+
+            if (filePart == null || filePart.getSize() == 0) {
+                request.setAttribute("error", "Please select an Excel file.");
+                request.getRequestDispatcher("/payregister_upload.jsp").forward(request, response);
+                return;
+            }
+
+            String fileName = filePart.getSubmittedFileName();
+            if (fileName == null || (!fileName.toLowerCase().endsWith(".xlsx") && !fileName.toLowerCase().endsWith(".xls"))) {
+                request.setAttribute("error", "Please upload a valid Excel file (.xlsx or .xls).");
+                request.getRequestDispatcher("/payregister_upload.jsp").forward(request, response);
+                return;
+            }
+
+            int year = Integer.parseInt(yearString.trim());
+            int count;
+
+            try (InputStream inputStream = filePart.getInputStream()) {
+                count = dao.uploadExcel(inputStream, fileName, cluster, month, year);
+            }
+
+            request.setAttribute("message", count + " records loaded successfully for Cluster-" + cluster + " (" + month + "/" + year + ")");
+            request.setAttribute("selectedCluster", cluster);
+            request.setAttribute("selectedMonth", month.toUpperCase());
+            request.setAttribute("selectedYear", yearString);
+
+            loadRecords(request, response);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("error", "Error uploading file: " + e.getMessage());
+            request.getRequestDispatcher("/payregister_upload.jsp").forward(request, response);
+        }
+    }
+
+    private void loadRecords(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        
+        String cluster = request.getParameter("cluster");
+        String[] zones = request.getParameterValues("zone");
+        String[] circles = request.getParameterValues("circle");
+        String[] divisions = request.getParameterValues("division");
+        String[] designations = request.getParameterValues("designation");
+        String[] dbStatuses = request.getParameterValues("dbStatus");
+        String month = request.getParameter("month");
+        String year = request.getParameter("year");
+
+        if (cluster == null) {
+            Object value = request.getAttribute("selectedCluster");
+            cluster = (value != null) ? value.toString() : "";
+        }
+
+        if (month == null) {
+            Object value = request.getAttribute("selectedMonth");
+            if (value != null) month = value.toString();
+        }
+
+        if (year == null) {
+            Object value = request.getAttribute("selectedYear");
+            if (value != null) year = value.toString();
+        }
+
+        zones = cleanArray(zones);
+        circles = cleanArray(circles);
+        divisions = cleanArray(divisions);
+        designations = cleanArray(designations);
+        dbStatuses = cleanArray(dbStatuses);
+
+        try (Connection con = DBConnection.getConnection()) {
+            
+            List<Map<String, Object>> records = dao.getRecords(con, cluster, zones, circles, divisions, designations, dbStatuses, month, year);
+            Map<String, Double> summaryMap = dao.getReportSummary(con, cluster, zones, circles, divisions, designations, dbStatuses, month, year);
+
+            List<String> zoneList = dao.getDistinctEmployeeMasterOptions(con, "ZONE", cluster, null, null, null);
+            List<String> circleList = dao.getDistinctEmployeeMasterOptions(con, "CIRCLE", cluster, zones, null, null);
+            List<String> divisionList = dao.getDistinctEmployeeMasterOptions(con, "DIV", cluster, zones, circles, null);
+            List<String> designationList = dao.getDistinctEmployeeMasterOptions(con, "DESIGNATION", cluster, zones, circles, divisions);
+            List<String> dbStatusList = dao.getDistinctEmployeeMasterOptions(con, "DB_STATUS", cluster, zones, circles, divisions);
+
+            List<Map<String, String>> companyBankList = dao.getCompanyBankDetails(con);
+
+            request.setAttribute("records", records);
+            request.setAttribute("summaryMap", summaryMap);
+            request.setAttribute("zoneList", zoneList);
+            request.setAttribute("circleList", circleList);
+            request.setAttribute("divisionList", divisionList);
+            request.setAttribute("designationList", designationList);
+            request.setAttribute("dbStatusList", dbStatusList);
+            request.setAttribute("companyBankList", companyBankList);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("error", "Database connection/query error: " + e.getMessage());
+        }
+
+        request.setAttribute("selectedCluster", cluster == null ? "" : cluster.trim());
+        request.setAttribute("selectedZones", zones != null ? Arrays.asList(zones) : null);
+        request.setAttribute("selectedCircles", circles != null ? Arrays.asList(circles) : null);
+        request.setAttribute("selectedDivisions", divisions != null ? Arrays.asList(divisions) : null);
+        request.setAttribute("selectedDesignations", designations != null ? Arrays.asList(designations) : null);
+        request.setAttribute("selectedDbStatuses", dbStatuses != null ? Arrays.asList(dbStatuses) : null);
+        request.setAttribute("selectedMonth", month == null ? "" : month.trim());
+        request.setAttribute("selectedYear", year == null ? "" : year.trim());
+
+        request.getRequestDispatcher("/payregister_report.jsp").forward(request, response);
+    }
+
+    private String[] cleanArray(String[] array) {
+        if (array == null || array.length == 0) return null;
+        List<String> valid = new ArrayList<>();
+        for (String s : array) {
+            if (s != null && !s.trim().isEmpty()) {
+                valid.add(s.trim());
+            }
+        }
+        return valid.isEmpty() ? null : valid.toArray(new String[0]);
+    }
+}

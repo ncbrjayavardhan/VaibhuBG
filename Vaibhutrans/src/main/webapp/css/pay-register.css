@@ -1,0 +1,214 @@
+body {
+    margin: 0;
+    padding: 0;
+
+    font-family: Arial, Helvetica, sans-serif;
+
+    background-color: #f4f6f8;
+
+    color: #222;
+}
+
+
+.container {
+    padding: 20px;
+}
+
+
+h2 {
+    margin-bottom: 20px;
+}
+
+
+h3 {
+    margin-top: 0;
+}
+
+
+.card {
+    background: white;
+
+    padding: 20px;
+
+    margin-bottom: 20px;
+
+    border-radius: 8px;
+
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+
+.form-group {
+    display: inline-flex;
+
+    flex-direction: column;
+
+    margin-right: 15px;
+
+    margin-bottom: 15px;
+}
+
+
+.form-group label {
+    font-weight: bold;
+
+    margin-bottom: 6px;
+}
+
+
+select {
+    min-width: 150px;
+
+    padding: 8px;
+
+    border: 1px solid #bbb;
+
+    border-radius: 4px;
+
+    background: white;
+}
+
+
+input[type="file"] {
+    padding: 6px;
+}
+
+
+.button-area {
+    margin-top: 10px;
+}
+
+
+.btn-primary {
+    background-color: #1976d2;
+
+    color: white;
+
+    border: none;
+
+    border-radius: 4px;
+
+    padding: 9px 18px;
+
+    cursor: pointer;
+
+    font-weight: bold;
+}
+
+
+.btn-primary:hover {
+    background-color: #125ca1;
+}
+
+
+.success {
+    background-color: #dff0d8;
+
+    border: 1px solid #b8d8a8;
+
+    color: #2d662d;
+
+    padding: 12px;
+
+    margin-bottom: 20px;
+
+    border-radius: 5px;
+}
+
+
+.error {
+    background-color: #f8d7da;
+
+    border: 1px solid #f1aeb5;
+
+    color: #842029;
+
+    padding: 12px;
+
+    margin-bottom: 20px;
+
+    border-radius: 5px;
+}
+
+
+.filter-form {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    align-items: end;
+}
+
+
+.filter-button {
+    margin-bottom: 15px;
+}
+
+
+.record-count {
+    background: white;
+
+    padding: 12px;
+
+    margin-bottom: 10px;
+
+    border-radius: 5px;
+}
+
+
+.table-container {
+    background: white;
+
+    overflow-x: auto;
+
+    max-height: 70vh;
+
+    border-radius: 5px;
+}
+
+
+table {
+    border-collapse: collapse;
+
+    width: max-content;
+
+    min-width: 100%;
+
+    font-size: 12px;
+}
+
+
+th {
+    position: sticky;
+
+    top: 0;
+
+    background-color: #e9ecef;
+
+    z-index: 1;
+
+    font-weight: bold;
+}
+
+
+th,
+td {
+    border: 1px solid #ccc;
+
+    padding: 6px 8px;
+
+    white-space: nowrap;
+
+    text-align: left;
+}
+
+
+tbody tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+
+tbody tr:hover {
+    background-color: #eef5ff;
+}
