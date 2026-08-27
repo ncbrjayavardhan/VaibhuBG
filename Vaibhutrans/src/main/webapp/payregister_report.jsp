@@ -1,5 +1,37 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-<%@ page import="java.util.List, java.util.Map, java.util.Arrays, java.text.DecimalFormat" %>
+<%@ page import="java.util.List, java.util.Map, java.util.Arrays" %>
+<%!
+    // Guaranteed Indian Number Formatter (e.g., 94,82,226.00 and 94,82,226)
+    public String formatIndianNumber(double value, int decimals) {
+        String s = (decimals > 0) ? String.format("%." + decimals + "f", value) : String.format("%.0f", value);
+        String intPart = s;
+        String decPart = "";
+        
+        int dotIndex = s.indexOf('.');
+        if (dotIndex != -1) {
+            intPart = s.substring(0, dotIndex);
+            decPart = s.substring(dotIndex);
+        }
+
+        if (intPart.length() <= 3) {
+            return intPart + decPart;
+        }
+
+        String lastThree = intPart.substring(intPart.length() - 3);
+        String remaining = intPart.substring(0, intPart.length() - 3);
+
+        StringBuilder formatted = new StringBuilder();
+        while (remaining.length() > 2) {
+            formatted.insert(0, "," + remaining.substring(remaining.length() - 2));
+            remaining = remaining.substring(0, remaining.length() - 2);
+        }
+        if (remaining.length() > 0) {
+            formatted.insert(0, remaining);
+        }
+
+        return formatted.toString() + "," + lastThree + decPart;
+    }
+%>
 <%
     response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
     response.setHeader("Pragma", "no-cache");
@@ -9,8 +41,6 @@
         response.sendRedirect("login.jsp");
         return;
     }
-    DecimalFormat dfCurr = new DecimalFormat("##,##,##0.00");
-    DecimalFormat dfInt = new DecimalFormat("##,##,##0");
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -354,50 +384,50 @@
                 double sumAutoOcr = (summary != null && summary.get("SUM_AUTO_OCR_ACT") != null) ? summary.get("SUM_AUTO_OCR_ACT") : 0.0;
             %>
 
-            <!-- First Card: CTC1_ACT, CTC_ACT, TOTAL_TCS_ACT, NET_AMT_PAYABLE, TOTAL_SALARY_AMOUNT -->
+            <!-- First Card: Currency Figures in Indian Number Format (₹ 94,82,226.00) -->
             <div class="metric-card-1 p-2 mb-2">
                 <div class="row text-center g-1 align-items-center">
                     <div class="col border-end">
                         <div class="metric-label">CTC1 Act</div>
-                        <div class="metric-val text-primary"><%= dfCurr.format(sumCtc1) %></div>
+                        <div class="metric-val text-primary">&#8377;<%= formatIndianNumber(sumCtc1, 2) %></div>
                     </div>
                     <div class="col border-end">
                         <div class="metric-label">CTC Act</div>
-                        <div class="metric-val text-primary"><%= dfCurr.format(sumCtc) %></div>
+                        <div class="metric-val text-primary">&#8377;<%= formatIndianNumber(sumCtc, 2) %></div>
                     </div>
                     <div class="col border-end">
                         <div class="metric-label">Total TCS Act</div>
-                        <div class="metric-val text-danger"><%= dfCurr.format(sumTcs) %></div>
+                        <div class="metric-val text-danger">&#8377;<%= formatIndianNumber(sumTcs, 2) %></div>
                     </div>
                     <div class="col border-end">
                         <div class="metric-label">Net Payable</div>
-                        <div class="metric-val text-success"><%= dfCurr.format(sumNet) %></div>
+                        <div class="metric-val text-success">&#8377;<%= formatIndianNumber(sumNet, 2) %></div>
                     </div>
                     <div class="col">
                         <div class="metric-label">Total Salary Amount</div>
-                        <div class="metric-val text-dark"><%= dfCurr.format(sumTotalSalary) %></div>
+                        <div class="metric-val text-dark">&#8377;<%= formatIndianNumber(sumTotalSalary, 2) %></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Second Card: TOTAL_BILLED_ACT, MANNUAL_BILLED_ACT, PROBE_BILLED_ACT, AUTO_OCR_ACT -->
+            <!-- Second Card: Quantity / Count Figures in Indian Number Format (94,82,226) -->
             <div class="metric-card-2 p-2 mb-2">
                 <div class="row text-center g-1 align-items-center">
                     <div class="col-3 border-end">
                         <div class="metric-label">Total Billed Act</div>
-                        <div class="metric-val text-dark"><%= dfInt.format(sumTotBilled) %></div>
+                        <div class="metric-val text-dark"><%= formatIndianNumber(sumTotBilled, 0) %></div>
                     </div>
                     <div class="col-3 border-end">
                         <div class="metric-label">Manual Billed</div>
-                        <div class="metric-val text-secondary"><%= dfInt.format(sumManBilled) %></div>
+                        <div class="metric-val text-secondary"><%= formatIndianNumber(sumManBilled, 0) %></div>
                     </div>
                     <div class="col-3 border-end">
                         <div class="metric-label">Probe Billed</div>
-                        <div class="metric-val text-info"><%= dfInt.format(sumProbeBilled) %></div>
+                        <div class="metric-val text-info"><%= formatIndianNumber(sumProbeBilled, 0) %></div>
                     </div>
                     <div class="col-3">
                         <div class="metric-label">Auto OCR Act</div>
-                        <div class="metric-val text-success"><%= dfInt.format(sumAutoOcr) %></div>
+                        <div class="metric-val text-success"><%= formatIndianNumber(sumAutoOcr, 0) %></div>
                     </div>
                 </div>
             </div>
@@ -1082,10 +1112,15 @@
 
         function exportExcel() {
             var data = getExportData();
+            var now = new Date();
+            var dd = String(now.getDate()).padStart(2, '0');
+            var mm = String(now.getMonth() + 1).padStart(2, '0');
+            var yyyy = now.getFullYear();
+
             var ws = XLSX.utils.aoa_to_sheet(data);
             var wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "PayRegister");
-            XLSX.writeFile(wb, "PayRegister_Report.xlsx");
+            XLSX.writeFile(wb, "PayRegister_Report_" + dd + "-" + mm + "-" + yyyy + ".xlsx");
         }
 
         function exportCsv() {
@@ -1134,6 +1169,11 @@
                 }
                 return "";
             }
+
+            var now = new Date();
+            var dd = String(now.getDate()).padStart(2, '0');
+            var mm = String(now.getMonth() + 1).padStart(2, '0');
+            var yyyy = now.getFullYear();
 
             var companionHeaders = [
                 'EMP_CODE',
@@ -1229,7 +1269,7 @@
             var wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Salary_Summary");
 
-            var companionFileName = formatName + "_SUMMARY_DETAILS_" + clusterLabel + "_" + monthLabel + "_" + yearYY + ".xlsx";
+            var companionFileName = formatName + "_SUMMARY_DETAILS_" + clusterLabel + "_" + monthLabel + "_" + yearYY + "_" + dd + "-" + mm + "-" + yyyy + ".xlsx";
 
             setTimeout(function() {
                 XLSX.writeFile(wb, companionFileName);
@@ -1358,7 +1398,7 @@
                 XLSX.utils.book_append_sheet(wb, ws, "Master_Details");
 
                 var bankPrefix = selectedBank ? selectedBank.replace(/[^a-zA-Z0-9_-]/g, '_') + "_" : "";
-                var masterFileName = "MASTER_DETAILS_" + bankPrefix + clusterLabel + "_" + monthLabel + "_" + yearYY + ".xlsx";
+                var masterFileName = "MASTER_DETAILS_" + bankPrefix + clusterLabel + "_" + monthLabel + "_" + yearYY + "_" + dd + "-" + mm + "-" + yyyy + ".xlsx";
 
                 XLSX.writeFile(wb, masterFileName);
 
@@ -1529,7 +1569,7 @@
                 ];
                 var wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, "Split 1");
-                XLSX.writeFile(wb, "ICICI_SAL_" + clusterLabel + "_" + monthLabel + "_" + yearYY + ".xlsx");
+                XLSX.writeFile(wb, "ICICI_SAL_" + clusterLabel + "_" + monthLabel + "_" + yearYY + "_" + dd + "-" + mm + "-" + yyyy + ".xlsx");
             } else {
                 var zip = new JSZip();
 
@@ -1551,13 +1591,13 @@
                     XLSX.utils.book_append_sheet(wb, ws, "Split " + (fileIdx + 1));
 
                     var wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-                    var excelFileName = "ICICI_SAL_" + clusterLabel + "_" + monthLabel + "_" + yearYY + "_Part" + (fileIdx + 1) + "_of_" + totalFiles + ".xlsx";
+                    var excelFileName = "ICICI_SAL_" + clusterLabel + "_" + monthLabel + "_" + yearYY + "_Part" + (fileIdx + 1) + "_of_" + totalFiles + "_" + dd + "-" + mm + "-" + yyyy + ".xlsx";
 
                     zip.file(excelFileName, wbout);
                 }
 
                 var zipBlob = await zip.generateAsync({ type: "blob" });
-                var zipFileName = "ICICI_SAL_" + clusterLabel + "_" + monthLabel + "_" + yearYY + "_AllParts (" + totalFiles + " Files).zip";
+                var zipFileName = "ICICI_SAL_" + clusterLabel + "_" + monthLabel + "_" + yearYY + "_AllParts (" + totalFiles + " Files)_" + dd + "-" + mm + "-" + yyyy + ".zip";
 
                 var link = document.createElement("a");
                 link.href = URL.createObjectURL(zipBlob);
@@ -1620,7 +1660,7 @@
             var divisionLabel = (document.querySelectorAll('.divisionCheckbox:checked').length === 1)
                 ? document.querySelector('.divisionCheckbox:checked').value.replace(/[^a-zA-Z0-9_-]/g, '_')
                 : "ALL_DIVISIONS";
-            var txtFileName = "BOM_SAL_" + clusterLabel + "_" + divisionLabel + "_" + monthLabel + "_" + yearYY + ".txt";
+            var txtFileName = "BOM_SAL_" + clusterLabel + "_" + divisionLabel + "_" + monthLabel + "_" + yearYY + "_" + dd + "-" + mm + "-" + yyyy + ".txt";
 
             var bomHeaders = [
                 'Debit Account No',
