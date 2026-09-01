@@ -48,8 +48,57 @@ public class PayRegisterServlet extends HttpServlet {
         String action = request.getParameter("action");
         if ("upload".equals(action)) {
             uploadExcel(request, response);
-        } else {
+        } else if ("updateStatus".equals(action)) {
+            updatePaymentStatus(request, response);
+        }else {
             loadRecords(request, response);
+        }
+    }
+    
+    
+    private void updatePaymentStatus(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        try {
+            String cluster = request.getParameter("uploadCluster");
+            String month = request.getParameter("uploadMonth");
+            String yearString = request.getParameter("uploadYear");
+            Part filePart = request.getPart("excelFile");
+
+            if (cluster == null || cluster.trim().isEmpty() ||
+                month == null || month.trim().isEmpty() ||
+                yearString == null || yearString.trim().isEmpty()) {
+                request.setAttribute("error", "Please select cluster, month, and year.");
+                request.getRequestDispatcher("/payment_status_update.jsp").forward(request, response);
+                return;
+            }
+
+            if (filePart == null || filePart.getSize() == 0) {
+                request.setAttribute("error", "Please select an Excel file.");
+                request.getRequestDispatcher("/payment_status_update.jsp").forward(request, response);
+                return;
+            }
+
+            String fileName = filePart.getSubmittedFileName();
+            if (fileName == null || (!fileName.toLowerCase().endsWith(".xlsx") && !fileName.toLowerCase().endsWith(".xls"))) {
+                request.setAttribute("error", "Please upload a valid Excel file (.xlsx or .xls).");
+                request.getRequestDispatcher("/payment_status_update.jsp").forward(request, response);
+                return;
+            }
+
+            int year = Integer.parseInt(yearString.trim());
+            int updatedCount;
+
+            try (InputStream inputStream = filePart.getInputStream()) {
+                updatedCount = dao.updateDbStatusBatch(inputStream, cluster, month, year);
+            }
+
+            request.setAttribute("message", updatedCount + " record(s) updated successfully for Cluster-" + cluster + " (" + month + "/" + year + ").");
+            request.getRequestDispatcher("/payment_status_update.jsp").forward(request, response);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("error", "Error updating payment status: " + e.getMessage());
+            request.getRequestDispatcher("/payment_status_update.jsp").forward(request, response);
         }
     }
 
@@ -184,7 +233,9 @@ public class PayRegisterServlet extends HttpServlet {
             List<String> circleList = dao.getDistinctEmployeeMasterOptions(con, "CIRCLE", cluster, zones, null, null);
             List<String> divisionList = dao.getDistinctEmployeeMasterOptions(con, "DIV", cluster, zones, circles, null);
             List<String> designationList = dao.getDistinctEmployeeMasterOptions(con, "DESIGNATION", cluster, zones, circles, divisions);
-            List<String> dbStatusList = dao.getDistinctEmployeeMasterOptions(con, "DB_STATUS", cluster, zones, circles, divisions);
+            
+//            List<String> dbStatusList = dao.getDistinctEmployeeMasterOptions(con, "DB_STATUS", cluster, zones, circles, divisions);
+            List<String> dbStatusList = dao.getDistinctPayRegisterDbStatuses(con, cluster, month, year);
 
             List<Map<String, String>> companyBankList = dao.getCompanyBankDetails(con);
 

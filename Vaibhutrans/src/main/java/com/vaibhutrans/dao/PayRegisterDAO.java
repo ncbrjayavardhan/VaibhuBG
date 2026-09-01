@@ -385,7 +385,7 @@ public class PayRegisterDAO {
         sql.append("COALESCE(EM.CIRCLE, P.CATEGORY) AS JOINED_CIRCLE, ");
         sql.append("COALESCE(EM.DIV, P.DEPARTMENT) AS JOINED_DIV, ");
         sql.append("COALESCE(EM.DESIGNATION, P.DESIGNATION) AS JOINED_DESIGNATION, ");
-        sql.append("EM.DB_STATUS AS JOINED_DB_STATUS ");
+        sql.append("P.DB_STATUS AS JOINED_DB_STATUS ");
         sql.append("FROM PAY_REGISTER P ");
         sql.append("LEFT JOIN EMPLOYEE_MASTER EM ON P.CODE = EM.EMP_CODE ");
         sql.append("WHERE 1=1 ");
@@ -444,7 +444,7 @@ public class PayRegisterDAO {
         }
 
         if (dbStatuses != null && dbStatuses.length > 0) {
-            sql.append("AND EM.DB_STATUS IN (");
+            sql.append("AND P.DB_STATUS IN (");
             for (int i = 0; i < dbStatuses.length; i++) {
                 if (i > 0) sql.append(",");
                 sql.append("?");
@@ -629,7 +629,7 @@ public class PayRegisterDAO {
             sql.append(") ");
         }
         if (dbStatuses != null && dbStatuses.length > 0) {
-            sql.append("AND EM.DB_STATUS IN (");
+            sql.append("AND P.DB_STATUS IN (");
             for (int i = 0; i < dbStatuses.length; i++) {
                 if (i > 0) sql.append(",");
                 sql.append("?");
@@ -797,6 +797,146 @@ public class PayRegisterDAO {
     public List<Map<String, String>> getCompanyBankDetails() throws Exception {
         try (Connection con = DBConnection.getConnection()) {
             return getCompanyBankDetails(con);
+        }
+    }
+    
+    /* Distinct DB_STATUS specifically from PAY_REGISTER table */
+    public List<String> getDistinctPayRegisterDbStatuses(
+            Connection con,
+            String cluster,
+            String month,
+            String year) throws Exception {
+
+        List<String> list = new ArrayList<>();
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT DISTINCT DB_STATUS FROM PAY_REGISTER WHERE DB_STATUS IS NOT NULL ");
+
+        List<Object> params = new ArrayList<>();
+
+        if (cluster != null && !cluster.trim().isEmpty()) {
+            sql.append("AND CLUSTER_NAME = ? ");
+            params.add(cluster.trim());
+        }
+
+        if (month != null && !month.trim().isEmpty()) {
+            sql.append("AND PAY_MONTH = ? ");
+            params.add(month.trim().toUpperCase(Locale.ENGLISH));
+        }
+
+        if (year != null && !year.trim().isEmpty()) {
+            sql.append("AND PAY_YEAR = ? ");
+            params.add(Integer.parseInt(year.trim()));
+        }
+
+        sql.append("ORDER BY DB_STATUS ASC");
+
+        try (PreparedStatement ps = con.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String val = rs.getString(1);
+                    if (val != null && !val.trim().isEmpty()) {
+                        list.add(val.trim());
+                    }
+                }
+            }
+        }
+        return list;
+    }
+    
+    public int updateDbStatusBatch(
+            InputStream inputStream,
+            String cluster,
+            String month,
+            int year) throws Exception {
+
+        cluster = cluster.trim();
+        month = month.trim().toUpperCase(Locale.ENGLISH);
+
+        Workbook workbook = WorkbookFactory.create(inputStream);
+        Sheet sheet = workbook.getSheetAt(0);
+        DataFormatter formatter = new DataFormatter();
+
+        // Dynamically locate the header row (scanning first 10 rows)
+        int headerRowIndex = -1;
+        int codeCol = -1;
+        int statusCol = -1;
+
+        for (int r = 0; r <= Math.min(10, sheet.getLastRowNum()); r++) {
+            Row row = sheet.getRow(r);
+            if (row == null) continue;
+
+            for (int c = 0; c < row.getLastCellNum(); c++) {
+                Cell cell = row.getCell(c, Row.RETURN_BLANK_AS_NULL);
+                if (cell != null) {
+                    String header = normalizeHeader(formatter.formatCellValue(cell));
+                    if (codeCol == -1 && (header.equals("CODE") || header.equals("EMPCODE") || header.equals("EMP_CODE") || header.equals("EMPLOYEE_CODE"))) {
+                        codeCol = c;
+                    }
+                    if (statusCol == -1 && (header.equals("DB_STATUS") || header.equals("STATUS") || header.equals("PAYMENT_STATUS") || header.equals("DBSTATUS"))) {
+                        statusCol = c;
+                    }
+                }
+            }
+            if (codeCol != -1 && statusCol != -1) {
+                headerRowIndex = r;
+                break;
+            }
+        }
+
+        if (headerRowIndex == -1 || codeCol == -1 || statusCol == -1) {
+            throw new Exception("Required columns ('code' and 'db_status') not found in the uploaded sheet header.");
+        }
+
+        String updateSql = "UPDATE PAY_REGISTER SET DB_STATUS = ? " +
+                           "WHERE CODE = ? AND CLUSTER_NAME = ? AND PAY_MONTH = ? AND PAY_YEAR = ?";
+
+        int updatedCount = 0;
+
+        try (Connection con = DBConnection.getConnection()) {
+            con.setAutoCommit(false);
+
+            try (PreparedStatement ps = con.prepareStatement(updateSql)) {
+                for (int r = headerRowIndex + 1; r <= sheet.getLastRowNum(); r++) {
+                    Row row = sheet.getRow(r);
+                    if (row == null || isEmptyRow(row)) continue;
+
+                    String code = getCellValueByIndex(row, codeCol, formatter);
+                    String dbStatus = getCellValueByIndex(row, statusCol, formatter);
+
+                    if (isBlank(code) || isBlank(dbStatus)) continue;
+
+                    ps.setString(1, dbStatus.trim());
+                    ps.setString(2, code.trim());
+                    ps.setString(3, cluster);
+                    ps.setString(4, month);
+                    ps.setInt(5, year);
+
+                    ps.addBatch();
+                    updatedCount++;
+
+                    if (updatedCount % 500 == 0) {
+                        ps.executeBatch();
+                    }
+                }
+
+                int[] batchResults = ps.executeBatch();
+                con.commit();
+
+                int actualRowsAffected = 0;
+                for (int res : batchResults) {
+                    if (res > 0) actualRowsAffected += res;
+                    else if (res == PreparedStatement.SUCCESS_NO_INFO) actualRowsAffected++;
+                }
+                return actualRowsAffected;
+
+            } catch (Exception e) {
+                con.rollback();
+                throw e;
+            }
         }
     }
 }

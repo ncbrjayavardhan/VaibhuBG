@@ -109,6 +109,9 @@
                             <a href="${ctx}/payregister_upload.jsp" class="block px-4 py-2 bg-dropdown-hover transition duration-200 text-sm">Upload Pay Register</a>
                         </li>
                         <li>
+                            <a href="${ctx}/payment_status_update.jsp" class="block px-4 py-2 bg-dropdown-hover transition duration-200 text-sm">Update Pay Status</a>
+                        </li>
+                        <li>
                             <a href="${ctx}/pay-register" class="block px-4 py-2 bg-dropdown-hover transition duration-200 text-sm">View Pay Register</a>
                         </li>
 

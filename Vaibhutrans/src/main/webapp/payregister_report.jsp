@@ -302,6 +302,10 @@
             background-color: #f1f5f9;
         }
 
+        tr.row-selected {
+            background-color: #eff6ff !important;
+        }
+
         /* Status Badges */
         .status-badge {
             font-weight: 700;
@@ -339,6 +343,27 @@
             padding: 2px 5px;
             border-radius: 4px;
             font-weight: 700;
+        }
+
+        /* Bulk Selection Banner */
+        .bulk-selection-bar {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 6px 12px;
+        }
+
+        .filtered-banner {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 11.5px;
+            color: #1e40af;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
     </style>
 </head>
@@ -413,10 +438,7 @@
             <!-- Second Card: Quantity / Count Figures in Indian Number Format (94,82,226) -->
             <div class="metric-card-2 p-2 mb-2">
                 <div class="row text-center g-1 align-items-center">
-                    <div class="col-3 border-end">
-                        <div class="metric-label">Total Billed Act</div>
-                        <div class="metric-val text-dark"><%= formatIndianNumber(sumTotBilled, 0) %></div>
-                    </div>
+                    
                     <div class="col-3 border-end">
                         <div class="metric-label">Manual Billed</div>
                         <div class="metric-val text-secondary"><%= formatIndianNumber(sumManBilled, 0) %></div>
@@ -425,9 +447,14 @@
                         <div class="metric-label">Probe Billed</div>
                         <div class="metric-val text-info"><%= formatIndianNumber(sumProbeBilled, 0) %></div>
                     </div>
-                    <div class="col-3">
+                    <div class="col-3 border-end">
                         <div class="metric-label">Auto OCR Act</div>
                         <div class="metric-val text-success"><%= formatIndianNumber(sumAutoOcr, 0) %></div>
+                    </div>
+                    
+                    <div class="col-3">
+                        <div class="metric-label">Total Billed Act</div>
+                        <div class="metric-val text-dark"><%= formatIndianNumber(sumTotBilled, 0) %></div>
                     </div>
                 </div>
             </div>
@@ -585,7 +612,7 @@
                             </div>
                         </div>
 
-                        <!-- 6) DB Status -->
+                        <!-- 6) DB Status Dropdown -->
                         <div class="filter-item-multi">
                             <div class="dropdown">
                                 <button class="multiselect-btn dropdown-toggle" type="button" id="dbStatusDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false">
@@ -678,13 +705,25 @@
                 </div>
             </div>
 
-            <!-- Client-side Quick Search Filter -->
-            <div class="row g-2 mb-2">
-                <div class="col-md-4">
-                    <div class="input-group input-group-sm">
+            <!-- Quick Search & Bulk Paste Action Toolbar -->
+            <div class="bulk-selection-bar d-flex flex-wrap align-items-center justify-content-between mb-2 gap-2">
+                <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 420px;">
+                    <div class="input-group input-group-sm w-100">
                         <span class="input-group-text bg-white border-end-0 py-1"><i class="fa fa-search text-muted"></i></span>
                         <input type="text" id="tableSearch" class="form-control border-start-0 py-1" placeholder="Search Code, Name, Account, Status..." onkeyup="filterTableSearch()">
                     </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <span id="filteredModeBanner" class="filtered-banner" style="display: none;">
+                        <i class="fa fa-filter"></i> Showing Selected Only (<span id="filteredSelectedCount">0</span>)
+                    </span>
+                    <button type="button" class="btn btn-gradient-primary btn-sm py-1 px-3" data-bs-toggle="modal" data-bs-target="#bulkPasteModal">
+                        <i class="fa fa-clipboard-list me-1"></i> Paste Employee Codes
+                    </button>
+                    <button type="button" id="clearSelectionBtn" class="btn btn-light btn-sm py-1 px-2 border" style="display: none;" onclick="clearAllBulkSelection()">
+                        <i class="fa fa-times-circle text-danger me-1"></i> Clear Selection (<span id="selectedCountBadge">0</span>)
+                    </button>
                 </div>
             </div>
 
@@ -771,6 +810,9 @@
                 <table id="payRegisterTable" class="table table-bordered-custom table-hover align-middle mb-0">
                     <thead>
                         <tr>
+                            <th style="width: 40px;" class="text-center">
+                                <input type="checkbox" id="selectAllRows" class="form-check-input" onchange="toggleSelectAllRows(this)" title="Select all on current page">
+                            </th>
                             <% for (String[] col : displayColumns) { %>
                                 <th data-col-name="<%= col[0] %>"><%= col[1] %></th>
                             <% } %>
@@ -781,8 +823,12 @@
                             if (records != null && !records.isEmpty()) {
                                 for (Map<String, Object> record : records) {
                                     String dbStatus = (record.get("DB_STATUS") != null) ? record.get("DB_STATUS").toString().trim() : "";
+                                    String empCodeVal = (record.get("CODE") != null) ? record.get("CODE").toString().trim() : "";
                         %>
-                            <tr data-db-status="<%= dbStatus %>">
+                            <tr data-db-status="<%= dbStatus %>" data-emp-code="<%= empCodeVal %>">
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input row-select-chk" value="<%= empCodeVal %>" onchange="onRowCheckboxChanged(this)">
+                                </td>
                                 <%
                                     for (String[] col : displayColumns) {
                                         String colKey = col[0];
@@ -812,7 +858,7 @@
                             } else {
                         %>
                             <tr>
-                                <td colspan="<%= displayColumns.length %>" class="text-center py-5 text-muted">
+                                <td colspan="<%= displayColumns.length + 1 %>" class="text-center py-5 text-muted">
                                     <i class="fa fa-folder-open fa-3x mb-3 text-secondary opacity-50 d-block"></i>
                                     No records found for the selected filters.
                                 </td>
@@ -835,6 +881,34 @@
                 </div>
             </div>
 
+        </div>
+    </div>
+
+    <!-- Bulk Paste Modal Popup -->
+    <div class="modal fade" id="bulkPasteModal" tabindex="-1" aria-labelledby="bulkPasteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0" style="border-radius: 12px;">
+                <div class="modal-header py-2 px-3 border-bottom">
+                    <h5 class="modal-title fw-bold" id="bulkPasteModalLabel" style="font-size: 14px; color: #1e293b;">
+                        <i class="fa fa-clipboard text-primary me-2"></i>Bulk Select by Employee Codes
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-toggle="modal" data-bs-target="#bulkPasteModal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <label for="bulkEmployeeCodesInput" class="form-label text-muted small fw-semibold mb-1" style="font-size: 11.5px;">
+                        Paste Employee Codes (separated by newlines, commas, tabs, or spaces):
+                    </label>
+                    <textarea id="bulkEmployeeCodesInput" class="form-control font-monospace" rows="7" placeholder="EMP001&#10;EMP002, EMP003&#10;EMP004	EMP005" style="font-size: 12px;"></textarea>
+                    
+                    <div id="bulkPasteFeedback" class="small mt-2" style="font-size: 11px; display: none;"></div>
+                </div>
+                <div class="modal-footer py-2 px-3 border-top">
+                    <button type="button" class="btn btn-light btn-sm border" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-gradient-primary btn-sm px-3" onclick="applyBulkPastedCodes()">
+                        <i class="fa fa-check me-1"></i> Apply Selection
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1028,6 +1102,221 @@
             return accountSelect.value.trim();
         }
 
+        /* --- Bulk Pasted Employee Codes Selection & Isolated Display Logic --- */
+        var selectedEmployeeCodesSet = new Set();
+
+        function applyBulkPastedCodes() {
+            var textarea = document.getElementById('bulkEmployeeCodesInput');
+            var feedback = document.getElementById('bulkPasteFeedback');
+            var rawText = (textarea ? textarea.value : '').trim();
+
+            if (!rawText) {
+                if (feedback) {
+                    feedback.className = 'small text-danger mt-2';
+                    feedback.textContent = 'Please paste at least one employee code.';
+                    feedback.style.display = 'block';
+                }
+                return;
+            }
+
+            var parsedTokens = rawText
+                .split(/[\r\n,\t\s]+/)
+                .map(function(code) { return code.trim().toUpperCase(); })
+                .filter(function(code) { return code.length > 0; });
+
+            if (parsedTokens.length === 0) {
+                if (feedback) {
+                    feedback.className = 'small text-danger mt-2';
+                    feedback.textContent = 'No valid employee codes found.';
+                    feedback.style.display = 'block';
+                }
+                return;
+            }
+
+            var inputCodesSet = new Set(parsedTokens);
+            var matchedCount = 0;
+            var rows = document.querySelectorAll('#payRegisterTable tbody tr');
+
+            selectedEmployeeCodesSet.clear();
+
+            rows.forEach(function(row) {
+                var empCode = (row.getAttribute('data-emp-code') || '').trim().toUpperCase();
+                var chk = row.querySelector('.row-select-chk');
+
+                if (empCode && inputCodesSet.has(empCode)) {
+                    selectedEmployeeCodesSet.add(empCode);
+                    if (chk) chk.checked = true;
+                    row.classList.add('row-selected');
+                    matchedCount++;
+                } else {
+                    if (chk) chk.checked = false;
+                    row.classList.remove('row-selected');
+                }
+            });
+
+            currentPage = 1;
+            filterTableRows();
+
+            var modalEl = document.getElementById('bulkPasteModal');
+            var modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) {
+                modalInstance.hide();
+            }
+
+            var unmatchedCount = inputCodesSet.size - matchedCount;
+            var summaryMsg = "Selected " + matchedCount + " of " + inputCodesSet.size + " pasted employee(s).";
+            if (unmatchedCount > 0) {
+                summaryMsg += " (" + unmatchedCount + " code(s) were not found in the currently loaded table).";
+            }
+            alert(summaryMsg);
+        }
+
+        function onRowCheckboxChanged(checkboxElem) {
+            var row = checkboxElem.closest('tr');
+            var empCode = (row.getAttribute('data-emp-code') || '').trim().toUpperCase();
+
+            if (checkboxElem.checked) {
+                if (empCode) selectedEmployeeCodesSet.add(empCode);
+                row.classList.add('row-selected');
+            } else {
+                if (empCode) selectedEmployeeCodesSet.delete(empCode);
+                row.classList.remove('row-selected');
+            }
+
+            filterTableRows();
+        }
+
+        function toggleSelectAllRows(masterCheckbox) {
+            var rows = document.querySelectorAll('#payRegisterTable tbody tr');
+            rows.forEach(function(row) {
+                if (row.dataset.matched !== '0' && row.style.display !== 'none') {
+                    var chk = row.querySelector('.row-select-chk');
+                    var empCode = (row.getAttribute('data-emp-code') || '').trim().toUpperCase();
+                    if (chk) {
+                        chk.checked = masterCheckbox.checked;
+                        if (masterCheckbox.checked) {
+                            if (empCode) selectedEmployeeCodesSet.add(empCode);
+                            row.classList.add('row-selected');
+                        } else {
+                            if (empCode) selectedEmployeeCodesSet.delete(empCode);
+                            row.classList.remove('row-selected');
+                        }
+                    }
+                }
+            });
+            filterTableRows();
+        }
+
+        function updateSelectAllState() {
+            var visibleRows = Array.from(document.querySelectorAll('#payRegisterTable tbody tr')).filter(function(r) {
+                return r.dataset.matched !== '0' && r.style.display !== 'none';
+            });
+            var activeCheckboxes = visibleRows.map(function(r) { return r.querySelector('.row-select-chk'); }).filter(Boolean);
+            var checkedBoxes = activeCheckboxes.filter(function(chk) { return chk.checked; });
+            var selectAll = document.getElementById('selectAllRows');
+            
+            if (selectAll && activeCheckboxes.length > 0) {
+                selectAll.checked = activeCheckboxes.length === checkedBoxes.length;
+                selectAll.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < activeCheckboxes.length;
+            } else if (selectAll) {
+                selectAll.checked = false;
+                selectAll.indeterminate = false;
+            }
+        }
+
+        function updateBulkSelectionUI() {
+            var clearBtn = document.getElementById('clearSelectionBtn');
+            var badge = document.getElementById('selectedCountBadge');
+            var banner = document.getElementById('filteredModeBanner');
+            var bannerCount = document.getElementById('filteredSelectedCount');
+            var count = selectedEmployeeCodesSet.size;
+
+            if (badge) badge.textContent = count;
+            if (bannerCount) bannerCount.textContent = count;
+
+            if (count > 0) {
+                if (clearBtn) clearBtn.style.display = 'inline-flex';
+                if (banner) banner.style.display = 'inline-flex';
+            } else {
+                if (clearBtn) clearBtn.style.display = 'none';
+                if (banner) banner.style.display = 'none';
+            }
+        }
+
+        function clearAllBulkSelection() {
+            selectedEmployeeCodesSet.clear();
+            var rows = document.querySelectorAll('#payRegisterTable tbody tr');
+            rows.forEach(function(row) {
+                var chk = row.querySelector('.row-select-chk');
+                if (chk) chk.checked = false;
+                row.classList.remove('row-selected');
+            });
+            var textarea = document.getElementById('bulkEmployeeCodesInput');
+            if (textarea) textarea.value = '';
+            var feedback = document.getElementById('bulkPasteFeedback');
+            if (feedback) feedback.style.display = 'none';
+
+            currentPage = 1;
+            filterTableRows();
+        }
+
+        /* Combined Filter Engine: Handles search query & active selection filtering */
+        function filterTableRows() {
+            var query = (document.getElementById('tableSearch') ? document.getElementById('tableSearch').value : '').toLowerCase().trim();
+            var table = document.getElementById('payRegisterTable');
+            if (!table || !table.tBodies || !table.tBodies[0]) return;
+
+            var rows = table.tBodies[0].rows;
+            if (rows.length === 1 && rows[0].cells.length === 1) return;
+
+            var hasActiveSelection = selectedEmployeeCodesSet.size > 0;
+
+            for (var i = 0; i < rows.length; i++) {
+                var r = rows[i];
+                var empCode = (r.getAttribute('data-emp-code') || '').trim().toUpperCase();
+                var text = (r.innerText || r.textContent).toLowerCase();
+
+                var matchesSearch = (query === '' || text.indexOf(query) > -1);
+                var matchesSelection = (!hasActiveSelection || selectedEmployeeCodesSet.has(empCode));
+
+                r.dataset.matched = (matchesSearch && matchesSelection) ? '1' : '0';
+            }
+
+            updateBulkSelectionUI();
+            updatePagination();
+        }
+
+        function filterTableSearch() {
+            currentPage = 1;
+            filterTableRows();
+        }
+
+        function getSelectedOrVisibleRows() {
+            var allRows = Array.from(document.querySelectorAll('#payRegisterTable tbody tr'));
+
+            // 1. If codes are selected in bulk or checked, export only those rows
+            if (selectedEmployeeCodesSet.size > 0) {
+                return allRows.filter(function(r) {
+                    var empCode = (r.getAttribute('data-emp-code') || '').trim().toUpperCase();
+                    return selectedEmployeeCodesSet.has(empCode) && r.dataset.matched !== '0';
+                });
+            }
+
+            var checkedRows = allRows.filter(function(r) {
+                var chk = r.querySelector('.row-select-chk');
+                return chk && chk.checked && r.dataset.matched !== '0';
+            });
+
+            if (checkedRows.length > 0) {
+                return checkedRows;
+            }
+
+            // 2. Otherwise export all filtered/matched records
+            return allRows.filter(function(r) {
+                return r.dataset.matched !== '0';
+            });
+        }
+
         var currentPage = 1;
         var pageSize = 50;
         var totalPages = 1;
@@ -1055,21 +1344,8 @@
 
             document.getElementById('pageInfo').textContent = 'Page ' + currentPage + ' of ' + totalPages;
             document.getElementById('totalBadge').textContent = 'Total Records: ' + matched.length;
-        }
 
-        function filterTableSearch() {
-            currentPage = 1;
-            var query = document.getElementById('tableSearch').value.toLowerCase().trim();
-            var table = document.getElementById('payRegisterTable');
-            var rows = table.tBodies[0].rows;
-
-            if (rows.length === 1 && rows[0].cells.length === 1) return;
-
-            for (var i = 0; i < rows.length; i++) {
-                var text = (rows[i].innerText || rows[i].textContent).toLowerCase();
-                rows[i].dataset.matched = (query === '' || text.indexOf(query) > -1) ? '1' : '0';
-            }
-            updatePagination();
+            updateSelectAllState();
         }
 
         function clearAllFilters() {
@@ -1095,14 +1371,17 @@
             var data = [];
             var headerRow = [];
             var ths = table.tHead.rows[0].cells;
-            for (var h = 0; h < ths.length; h++) headerRow.push(ths[h].innerText.trim());
+            
+            for (var h = 1; h < ths.length; h++) {
+                headerRow.push(ths[h].innerText.trim());
+            }
             data.push(headerRow);
 
-            var rows = table.tBodies[0].rows;
+            var rows = getSelectedOrVisibleRows();
             for (var i = 0; i < rows.length; i++) {
-                if (rows[i].dataset.matched === '0' || (rows.length === 1 && rows[i].cells.length === 1)) continue;
+                if (rows.length === 1 && rows[i].cells.length === 1) continue;
                 var rowData = [];
-                for (var c = 0; c < rows[i].cells.length; c++) {
+                for (var c = 1; c < rows[i].cells.length; c++) {
                     rowData.push((rows[i].cells[c].innerText || rows[i].cells[c].textContent).trim());
                 }
                 data.push(rowData);
@@ -1150,8 +1429,8 @@
             var table = document.getElementById('payRegisterTable');
             if (!table || !table.tBodies || !table.tBodies[0]) return;
 
-            var rows = table.tBodies[0].rows;
-            if (rows.length === 1 && rows[0].cells.length === 1) return;
+            var rows = getSelectedOrVisibleRows();
+            if (rows.length === 0 || (rows.length === 1 && rows[0].cells.length === 1)) return;
 
             var colIndexMap = {};
             var ths = table.tHead.rows[0].cells;
@@ -1203,7 +1482,6 @@
 
             for (var i = 0; i < rows.length; i++) {
                 var r = rows[i];
-                if (r.dataset.matched === '0') continue;
 
                 var dbStatus = (r.getAttribute('data-db-status') || '').trim().toLowerCase();
                 if (dbStatus !== 'allow') {
@@ -1421,8 +1699,8 @@
                 return;
             }
 
-            var rows = table.tBodies[0].rows;
-            if (rows.length === 1 && rows[0].cells.length === 1) {
+            var rows = getSelectedOrVisibleRows();
+            if (rows.length === 0 || (rows.length === 1 && rows[0].cells.length === 1)) {
                 alert('No records available to export for the selected filters.');
                 return;
             }
@@ -1480,10 +1758,6 @@
 
             for (var i = 0; i < rows.length; i++) {
                 var r = rows[i];
-
-                if (r.dataset.matched === '0') {
-                    continue;
-                }
 
                 var dbStatus = (r.getAttribute('data-db-status') || '').trim().toLowerCase();
                 if (dbStatus !== 'allow') {
@@ -1549,7 +1823,7 @@
             }
 
             if (generatedRows.length === 0) {
-                alert('No valid records with DB_STATUS = "Allow" found for the active filters.');
+                alert('No valid records with DB_STATUS = "Allow" found in the selected rows.');
                 return;
             }
 
@@ -1624,8 +1898,8 @@
                 return;
             }
 
-            var rows = table.tBodies[0].rows;
-            if (rows.length === 1 && rows[0].cells.length === 1) {
+            var rows = getSelectedOrVisibleRows();
+            if (rows.length === 0 || (rows.length === 1 && rows[0].cells.length === 1)) {
                 alert('No records available to export for the selected filters.');
                 return;
             }
@@ -1699,10 +1973,6 @@
 
             for (var i = 0; i < rows.length; i++) {
                 var r = rows[i];
-
-                if (r.dataset.matched === '0') {
-                    continue;
-                }
 
                 var dbStatus = (r.getAttribute('data-db-status') || '').trim().toLowerCase();
                 if (dbStatus !== 'allow') {
@@ -1791,7 +2061,7 @@
             }
 
             if (textLines.length <= 1) {
-                alert('No valid records with DB_STATUS = "Allow" found for the active filters.');
+                alert('No valid records with DB_STATUS = "Allow" found in the selected rows.');
                 return;
             }
 
