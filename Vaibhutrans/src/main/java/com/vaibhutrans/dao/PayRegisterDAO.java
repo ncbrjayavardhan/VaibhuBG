@@ -938,5 +938,40 @@ public class PayRegisterDAO {
                 throw e;
             }
         }
+        
+    }
+    
+    public boolean updateSingleRecordStatus(
+            String empCode, 
+            String status, 
+            String cluster, 
+            String month, 
+            String year) throws Exception {
+
+        StringBuilder sql = new StringBuilder("UPDATE PAY_REGISTER SET DB_STATUS = ? WHERE CODE = ?");
+        List<Object> params = new ArrayList<>();
+        params.add(status.trim());
+        params.add(empCode.trim());
+
+        if (cluster != null && !cluster.trim().isEmpty()) {
+            sql.append(" AND CLUSTER_NAME = ?");
+            params.add(cluster.trim());
+        }
+        if (month != null && !month.trim().isEmpty()) {
+            sql.append(" AND PAY_MONTH = ?");
+            params.add(month.trim().toUpperCase(Locale.ENGLISH));
+        }
+        if (year != null && !year.trim().isEmpty()) {
+            sql.append(" AND PAY_YEAR = ?");
+            params.add(Integer.parseInt(year.trim()));
+        }
+
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            return ps.executeUpdate() > 0;
+        }
     }
 }

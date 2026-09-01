@@ -50,7 +50,9 @@ public class PayRegisterServlet extends HttpServlet {
             uploadExcel(request, response);
         } else if ("updateStatus".equals(action)) {
             updatePaymentStatus(request, response);
-        }else {
+        } else if ("updateRowStatus".equals(action)) {
+            handleRowStatusUpdate(request, response);
+        } else {
             loadRecords(request, response);
         }
     }
@@ -274,5 +276,38 @@ public class PayRegisterServlet extends HttpServlet {
             }
         }
         return valid.isEmpty() ? null : valid.toArray(new String[0]);
+    }
+    
+    
+    private void handleRowStatusUpdate(HttpServletRequest request, HttpServletResponse response) 
+            throws IOException {
+        response.setContentType("application/json;charset=UTF-8");
+        PrintWriter out = response.getWriter();
+
+        String empCode = request.getParameter("empCode");
+        String newStatus = request.getParameter("newStatus");
+        String cluster = request.getParameter("cluster");
+        String month = request.getParameter("month");
+        String year = request.getParameter("year");
+
+        if (empCode == null || newStatus == null || empCode.trim().isEmpty() || newStatus.trim().isEmpty()) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            out.print("{\"success\":false,\"message\":\"Missing required parameters.\"}");
+            return;
+        }
+
+        try {
+            boolean updated = dao.updateSingleRecordStatus(empCode, newStatus, cluster, month, year);
+            if (updated) {
+                out.print("{\"success\":true,\"newStatus\":\"" + newStatus + "\"}");
+            } else {
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                out.print("{\"success\":false,\"message\":\"Record not found or unchanged.\"}");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            out.print("{\"success\":false,\"message\":\"" + e.getMessage() + "\"}");
+        }
     }
 }

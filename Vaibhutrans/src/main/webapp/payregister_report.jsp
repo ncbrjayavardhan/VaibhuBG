@@ -365,6 +365,71 @@
             align-items: center;
             gap: 6px;
         }
+        /* Modern Action Button Styling */
+.btn-action-pill {
+    background: linear-gradient(135deg, rgb(170, 121, 65) 0%, rgb(170, 121, 65) 100%);
+    color: #ffffff !important;
+    border-radius: 50rem;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.25);
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-action-pill:hover, 
+.btn-action-pill:focus {
+    background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%);
+    box-shadow: 0 4px 8px rgba(79, 70, 229, 0.35);
+    transform: translateY(-1px);
+    color: #ffffff;
+}
+
+/* Enhanced Dropdown Menu */
+.action-dropdown-menu {
+    border-radius: 10px;
+    padding: 6px;
+    min-width: 140px;
+    animation: dropdownFadeIn 0.15s ease-out;
+}
+
+.action-dropdown-menu .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.action-dropdown-menu .dropdown-item:hover {
+    background-color: #f8fafc;
+    transform: translateX(2px);
+}
+
+.action-item-allow:hover { color: #16a34a !important; }
+.action-item-hold:hover  { color: #dc2626 !important; }
+.action-item-paid:hover  { color: #2563eb !important; }
+
+.icon-circle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-size: 9.5px;
+}
+
+@keyframes dropdownFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+        
     </style>
 </head>
 <body>
@@ -438,7 +503,6 @@
             <!-- Second Card: Quantity / Count Figures in Indian Number Format (94,82,226) -->
             <div class="metric-card-2 p-2 mb-2">
                 <div class="row text-center g-1 align-items-center">
-                    
                     <div class="col-3 border-end">
                         <div class="metric-label">Manual Billed</div>
                         <div class="metric-val text-secondary"><%= formatIndianNumber(sumManBilled, 0) %></div>
@@ -451,7 +515,6 @@
                         <div class="metric-label">Auto OCR Act</div>
                         <div class="metric-val text-success"><%= formatIndianNumber(sumAutoOcr, 0) %></div>
                     </div>
-                    
                     <div class="col-3">
                         <div class="metric-label">Total Billed Act</div>
                         <div class="metric-val text-dark"><%= formatIndianNumber(sumTotBilled, 0) %></div>
@@ -813,6 +876,7 @@
                             <th style="width: 40px;" class="text-center">
                                 <input type="checkbox" id="selectAllRows" class="form-check-input" onchange="toggleSelectAllRows(this)" title="Select all on current page">
                             </th>
+                            <th style="width: 80px;" class="text-center">Action</th>
                             <% for (String[] col : displayColumns) { %>
                                 <th data-col-name="<%= col[0] %>"><%= col[1] %></th>
                             <% } %>
@@ -829,6 +893,48 @@
                                 <td class="text-center">
                                     <input type="checkbox" class="form-check-input row-select-chk" value="<%= empCodeVal %>" onchange="onRowCheckboxChanged(this)">
                                 </td>
+                                <%-- <!-- Per-Row Action Dropdown -->
+                                <td class="text-center">
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle py-0 px-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 11px;">
+                                            Action
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 11.5px; min-width: 100px;">
+                                            <li><a class="dropdown-item text-success fw-semibold" href="javascript:void(0)" onclick="updateRecordStatus('<%= empCodeVal %>', 'Allow', this)"><i class="fa fa-check-circle me-1"></i> Allow</a></li>
+                                            <li><a class="dropdown-item text-danger fw-semibold" href="javascript:void(0)" onclick="updateRecordStatus('<%= empCodeVal %>', 'Hold', this)"><i class="fa fa-pause-circle me-1"></i> Hold</a></li>
+                                            <li><a class="dropdown-item text-primary fw-semibold" href="javascript:void(0)" onclick="updateRecordStatus('<%= empCodeVal %>', 'Paid', this)"><i class="fa-solid fa-indian-rupee-sign me-1"></i> Paid</a></li>
+                                        </ul>
+                                    </div>
+                                </td> --%>
+                                <!-- Per-Row Action Dropdown -->
+<td class="text-center">
+    <div class="dropdown">
+        <button class="btn btn-action-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fa fa-sliders me-1"></i> Action
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end action-dropdown-menu shadow-lg border-0">
+            <li>
+                <a class="dropdown-item action-item-allow" href="javascript:void(0)" onclick="updateRecordStatus('<%= empCodeVal %>', 'Allow', this)">
+                    <span class="icon-circle bg-success-subtle text-success"><i class="fa fa-check"></i></span>
+                    <span class="fw-semibold">Allow</span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item action-item-hold" href="javascript:void(0)" onclick="updateRecordStatus('<%= empCodeVal %>', 'Hold', this)">
+                    <span class="icon-circle bg-danger-subtle text-danger"><i class="fa fa-pause"></i></span>
+                    <span class="fw-semibold">Hold</span>
+                </a>
+            </li>
+            <li><hr class="dropdown-divider my-1"></li>
+            <li>
+                <a class="dropdown-item action-item-paid" href="javascript:void(0)" onclick="updateRecordStatus('<%= empCodeVal %>', 'Paid', this)">
+                    <span class="icon-circle bg-primary-subtle text-primary"><i class="fa-solid fa-indian-rupee-sign"></i></span>
+                    <span class="fw-semibold">Mark Paid</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</td>
                                 <%
                                     for (String[] col : displayColumns) {
                                         String colKey = col[0];
@@ -858,7 +964,7 @@
                             } else {
                         %>
                             <tr>
-                                <td colspan="<%= displayColumns.length + 1 %>" class="text-center py-5 text-muted">
+                                <td colspan="<%= displayColumns.length + 2 %>" class="text-center py-5 text-muted">
                                     <i class="fa fa-folder-open fa-3x mb-3 text-secondary opacity-50 d-block"></i>
                                     No records found for the selected filters.
                                 </td>
@@ -1100,6 +1206,74 @@
             }
 
             return accountSelect.value.trim();
+        }
+
+        /* --- AJAX Single Record Status Update Handler --- */
+        function updateRecordStatus(empCode, newStatus, triggerElem) {
+            if (!empCode) return;
+
+            var row = triggerElem.closest('tr');
+            var btn = row.querySelector('.dropdown-toggle');
+            var originalBtnText = btn.innerHTML;
+            
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+
+            var params = new URLSearchParams();
+            params.append('action', 'updateRowStatus');
+            params.append('empCode', empCode);
+            params.append('newStatus', newStatus);
+            params.append('cluster', selectedCluster || '');
+            params.append('month', selectedMonth || '');
+            params.append('year', selectedYear || '');
+
+            fetch('pay-register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                },
+                body: params.toString()
+            })
+            .then(function(res) {
+                if (!res.ok) throw new Error("HTTP error " + res.status);
+                return res.json();
+            })
+            .then(function(data) {
+                btn.innerHTML = originalBtnText;
+                btn.disabled = false;
+
+                if (data.success) {
+                    row.setAttribute('data-db-status', newStatus);
+
+                    var colIndexMap = {};
+                    var ths = document.querySelectorAll('#payRegisterTable thead th');
+                    for (var c = 0; c < ths.length; c++) {
+                        var colName = ths[c].getAttribute('data-col-name');
+                        if (colName) {
+                            colIndexMap[colName.toUpperCase()] = c;
+                        }
+                    }
+
+                    var dbStatusColIdx = colIndexMap['DB_STATUS'];
+                    if (dbStatusColIdx !== undefined && row.cells[dbStatusColIdx]) {
+                        var badgeClass = 'status-badge-other';
+                        var stLower = newStatus.toLowerCase();
+                        if (stLower === 'allow') badgeClass = 'status-badge-allow';
+                        else if (stLower === 'hold' || stLower === 'left') badgeClass = 'status-badge-hold';
+                        else if (stLower === 'paid') badgeClass = 'status-badge-paid';
+
+                        row.cells[dbStatusColIdx].innerHTML = '<span class="status-badge ' + badgeClass + '">' + newStatus + '</span>';
+                    }
+                } else {
+                    alert('Update failed: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(function(err) {
+                btn.innerHTML = originalBtnText;
+                btn.disabled = false;
+                console.error('Status update error:', err);
+                alert('Failed to update status: ' + err.message);
+            });
         }
 
         /* --- Bulk Pasted Employee Codes Selection & Isolated Display Logic --- */
@@ -1372,7 +1546,8 @@
             var headerRow = [];
             var ths = table.tHead.rows[0].cells;
             
-            for (var h = 1; h < ths.length; h++) {
+            // Skip column 0 (Checkbox) and column 1 (Action)
+            for (var h = 2; h < ths.length; h++) {
                 headerRow.push(ths[h].innerText.trim());
             }
             data.push(headerRow);
@@ -1381,7 +1556,8 @@
             for (var i = 0; i < rows.length; i++) {
                 if (rows.length === 1 && rows[i].cells.length === 1) continue;
                 var rowData = [];
-                for (var c = 1; c < rows[i].cells.length; c++) {
+                // Skip column 0 (Checkbox) and column 1 (Action)
+                for (var c = 2; c < rows[i].cells.length; c++) {
                     rowData.push((rows[i].cells[c].innerText || rows[i].cells[c].textContent).trim());
                 }
                 data.push(rowData);
