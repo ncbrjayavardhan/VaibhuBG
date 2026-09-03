@@ -7,6 +7,7 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import com.iglsupport.dao.ReportDAO;
 import com.iglsupport.model.ReportDTO;
@@ -19,14 +20,30 @@ public class ReportServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
-        List<ReportDTO> reportList = ReportDAO.getDailyReport();
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("currentUser") == null) {
+            response.sendRedirect("loginpage.jsp?msg=session_expired");
+            return;
+        }
+
+        String userRole = (String) session.getAttribute("userRole");
+        Integer userGid = (Integer) session.getAttribute("userGid");
+
+        List<ReportDTO> reportList;
+        
+        // If Admin, or if Manager with gid == 0, treat like Admin (pass null to show all records with portion details)
+        if ("Admin".equalsIgnoreCase(userRole) || ("Manager".equalsIgnoreCase(userRole) && userGid != null && userGid == 0) || ("IGL".equalsIgnoreCase(userRole) && userGid != null && userGid == 0)) {
+            reportList = ReportDAO.getDailyReport(null);
+        } else {
+            reportList = ReportDAO.getDailyReport(userGid);
+        }
         
         if (reportList != null && !reportList.isEmpty()) {
             request.setAttribute("reportList", reportList);
             request.setAttribute("hasData", true);
         } else {
             request.setAttribute("hasData", false);
-            request.setAttribute("message", "No portions found with inv_status = 1. Report cannot be generated.");
+            request.setAttribute("message", "No portions found matching your assigned area or inv_status = 1.");
         }
         
         request.getRequestDispatcher("report.jsp").forward(request, response);

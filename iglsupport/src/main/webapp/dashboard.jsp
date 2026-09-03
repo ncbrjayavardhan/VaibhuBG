@@ -57,6 +57,7 @@
         margin-top: 20px;
         display: flex;
         gap: 15px;
+        flex-wrap: wrap;
     }
     .action-card {
         border: 1px solid #dee2e6;
@@ -83,15 +84,28 @@
 <%
     // Session validation: Prevent unauthorized direct URL access
     String currentUser = (String) session.getAttribute("currentUser");
-    if (currentUser == null) {
+    String userRole = (String) session.getAttribute("userRole");
+    
+    if (currentUser == null || userRole == null) {
+        response.sendRedirect("loginpage.jsp");
+        return;
+    }
+    
+    // Check if role is allowed
+    boolean isAdmin = "Admin".equalsIgnoreCase(userRole);
+    boolean isManagerOrIGL = "Manager".equalsIgnoreCase(userRole) || "IGL".equalsIgnoreCase(userRole);
+    
+    if (!isAdmin && !isManagerOrIGL) {
         response.sendRedirect("loginpage.jsp");
         return;
     }
 %>
 <div class="navbar">
-    <h1>Application Dashboard</h1>
+    <h1>Application Dashboard (<%= userRole %>)</h1>
     <div class="nav-links">
-        <a href="ReportServlet" class="nav-link">Daily Progress Report</a>
+        <% if (isAdmin || isManagerOrIGL) { %>
+            <a href="ReportServlet" class="nav-link">Daily Progress Report</a>
+        <% } %>
         <span>Welcome, <strong><%= currentUser %></strong></span> | 
         <a href="LogoutServlet" class="logout-link">Logout</a>
     </div>
@@ -99,24 +113,26 @@
 
 <div class="content-card">
     <h2>Welcome to your workspace</h2>
-    <p>You have successfully authenticated via MySQL database.</p>
+    <p>You have successfully authenticated via MySQL database with role: <strong><%= userRole %></strong></p>
     
     <div class="quick-actions">
-        <a href="ReportServlet" class="action-card">
-            <strong>Daily Progress Report &rarr;</strong>
-            <span>View GA & portion reading and invoice reconciliation</span>
-        </a>
-        <a href="PortionDetailsServlet" class="action-card">
-            <strong>Portion Details &rarr;</strong>
-            <span>Manage portion information and settings</span>
-        </a>
+        <!-- Visible to Admin, Manager, and IGL -->
+        <% if (isAdmin || isManagerOrIGL) { %>
+            <a href="ReportServlet" class="action-card">
+                <strong>Daily Progress Report &rarr;</strong>
+                <span>View GA & portion reading and invoice reconciliation</span>
+            </a>
+        <% } %>
+
+        <!-- Visible ONLY to Admin -->
+        <% if (isAdmin) { %>
+            <a href="PortionDetailsServlet" class="action-card">
+                <strong>Portion Details &rarr;</strong>
+                <span>Manage portion information and settings</span>
+            </a>
+        <% } %>
     </div>
-    
-    
 </div>
-
-
-<!-- <a href="PortionDetailsServlet" class="nav-link">Portion Setup</a> -->
 
 </body>
 </html>

@@ -233,6 +233,30 @@
             margin-top: 15px;
             font-size: 14px;
         }
+        /* Oval / Pill-shaped Billed % Badges */
+        .pill-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 12px;
+            text-align: center;
+        }
+        .badge-low { 
+            background-color: #ffd1dc; 
+            color: #900c3f; 
+            border: 1px solid #f5c6cb; 
+        }
+        .badge-medium { 
+            background-color: #ffe5b4; 
+            color: #b78103; 
+            border: 1px solid #ffeeba; 
+        }
+        .badge-high { 
+            background-color: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb; 
+        }
     </style>
 </head>
 <body>
@@ -384,9 +408,25 @@
                                 <td>${item.totalReading}</td>
                                 <td>${item.totalInv}</td>
                                 <td>${item.unbilled}</td>
+                                
+                                    <%-- <c:set var="bPct" value="${item.billedPercent}" />
+                                    <td class="<c:choose><c:when test='${bPct < 50}'>box-low</c:when><c:when test='${bPct >= 50 && bPct <= 75}'>box-medium</c:when><c:otherwise>box-high</c:otherwise></c:choose>">
+	                                    <span style="font-weight: 700;">
+	                                        <fmt:formatNumber value="${bPct}" maxFractionDigits="2" minFractionDigits="2"/>%
+	                                    </span>
+                                </td> --%>
+                                <%-- <td>
+                                    <c:set var="bPct" value="${item.billedPercent}" />
+                                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                        <span class="legend-box <c:choose><c:when test='${bPct < 50}'>box-low</c:when><c:when test='${bPct >= 50 && bPct <= 75}'>box-medium</c:when><c:otherwise>box-high</c:otherwise></c:choose>"></span>
+                                        <span style="font-weight: 600;">
+                                            <fmt:formatNumber value="${bPct}" maxFractionDigits="2" minFractionDigits="2"/>%
+                                        </span>
+                                    </div>
+                                </td> --%>
                                 <td>
                                     <c:set var="bPct" value="${item.billedPercent}" />
-                                    <span>
+                                    <span class="pill-badge <c:choose><c:when test='${bPct < 50}'>badge-low</c:when><c:when test='${bPct >= 50 && bPct <= 75}'>badge-medium</c:when><c:otherwise>badge-high</c:otherwise></c:choose>">
                                         <fmt:formatNumber value="${bPct}" maxFractionDigits="2" minFractionDigits="2"/>%
                                     </span>
                                 </td>
