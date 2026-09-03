@@ -22,39 +22,49 @@ public class ReportDAO {
         List<ReportDTO> reportList = new ArrayList<>();
 
         String sql = "SELECT " +
-                     "    pd.state, " +
-                     "    pd.city, " +
-                     "    g.name AS ga_name, " +
-                     "    p.pid AS portion_id, " +
-                     "    p.inv_status, " +
-                     "    pd.total_data, " +
-                     "    pd.start_date, " +
-                     "    pd.end_date, " +
-                     "    COALESCE(r_today.cnt, 0) AS today_reading, " +
-                     "    COALESCE(r_yday.cnt, 0) AS till_yday_reading " +
-                     "FROM portion p " +
-                     "JOIN ga g ON p.gid = g.gid " +
-                     "LEFT JOIN portion_details pd ON p.pid = pd.pid " +
-                     "LEFT JOIN (" +
-                     "    SELECT r.pid, COUNT(r.id) AS cnt " +
-                     "    FROM readings r " +
-                     "    JOIN portion_details d ON r.pid = d.pid " +
-                     "    WHERE DATE(r.reading_date) = CURRENT_DATE() " +
-                     "      AND (d.start_date IS NULL OR DATE(r.reading_date) >= d.start_date) " +
-                     "      AND (d.end_date IS NULL OR DATE(r.reading_date) <= d.end_date) " +
-                     "    GROUP BY r.pid " +
-                     ") r_today ON p.pid = r_today.pid " +
-                     "LEFT JOIN (" +
-                     "    SELECT r.pid, COUNT(r.id) AS cnt " +
-                     "    FROM readings r " +
-                     "    JOIN portion_details d ON r.pid = d.pid " +
-                     "    WHERE DATE(r.reading_date) < CURRENT_DATE() " +
-                     "      AND (d.start_date IS NULL OR DATE(r.reading_date) >= d.start_date) " +
-                     "      AND (d.end_date IS NULL OR DATE(r.reading_date) <= d.end_date) " +
-                     "    GROUP BY r.pid " +
-                     ") r_yday ON p.pid = r_yday.pid " +
-                     "WHERE p.inv_status = 1 " +
-                     "ORDER BY pd.state ASC, pd.city ASC, g.name ASC, p.pid ASC";
+                "    pd.state, " +
+                "    pd.city, " +
+                "    g.name AS ga_name, " +
+                "    p.pid AS portion_id, " +
+                "    p.inv_status, " +
+                "    pd.total_data, " +
+                "    pd.start_date, " +
+                "    pd.end_date, " +
+                "    COALESCE(r_today.cnt, 0) AS today_reading, " +
+                "    COALESCE(r_yday_exact.cnt, 0) AS yday_reading, " +
+                "    COALESCE(r_yday.cnt, 0) AS till_yday_reading " +
+                "FROM portion p " +
+                "JOIN ga g ON p.gid = g.gid " +
+                "LEFT JOIN portion_details pd ON p.pid = pd.pid " +
+                "LEFT JOIN (" +
+                "    SELECT r.pid, COUNT(r.id) AS cnt " +
+                "    FROM readings r " +
+                "    JOIN portion_details d ON r.pid = d.pid " +
+                "    WHERE DATE(r.reading_date) = CURRENT_DATE() " +
+                "      AND (d.start_date IS NULL OR DATE(r.reading_date) >= d.start_date) " +
+                "      AND (d.end_date IS NULL OR DATE(r.reading_date) <= d.end_date) " +
+                "    GROUP BY r.pid " +
+                ") r_today ON p.pid = r_today.pid " +
+                "LEFT JOIN (" +
+                "    SELECT r.pid, COUNT(r.id) AS cnt " +
+                "    FROM readings r " +
+                "    JOIN portion_details d ON r.pid = d.pid " +
+                "    WHERE DATE(r.reading_date) = CURRENT_DATE() - INTERVAL 1 DAY " +
+                "      AND (d.start_date IS NULL OR DATE(r.reading_date) >= d.start_date) " +
+                "      AND (d.end_date IS NULL OR DATE(r.reading_date) <= d.end_date) " +
+                "    GROUP BY r.pid " +
+                ") r_yday_exact ON p.pid = r_yday_exact.pid " +
+                "LEFT JOIN (" +
+                "    SELECT r.pid, COUNT(r.id) AS cnt " +
+                "    FROM readings r " +
+                "    JOIN portion_details d ON r.pid = d.pid " +
+                "    WHERE DATE(r.reading_date) < CURRENT_DATE() " +
+                "      AND (d.start_date IS NULL OR DATE(r.reading_date) >= d.start_date) " +
+                "      AND (d.end_date IS NULL OR DATE(r.reading_date) <= d.end_date) " +
+                "    GROUP BY r.pid " +
+                ") r_yday ON p.pid = r_yday.pid " +
+                "WHERE p.inv_status = 1 " +
+                "ORDER BY pd.state ASC, pd.city ASC, g.name ASC, p.pid ASC";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement pst = conn.prepareStatement(sql);
@@ -75,12 +85,10 @@ public class ReportDAO {
                 row.setGaName(gaName != null ? gaName : "-");
                 row.setPortionId(pid);
 
-                // Total Data from portion_details
                 int totalDataVal = rs.getInt("total_data");
                 Integer totalData = rs.wasNull() ? null : totalDataVal;
                 row.setTotalData(totalData);
 
-                // Start and End dates
                 Date sDate = rs.getDate("start_date");
                 Date eDate = rs.getDate("end_date");
                 LocalDate startDate = (sDate != null) ? sDate.toLocalDate() : null;
@@ -89,32 +97,32 @@ public class ReportDAO {
                 row.setStartDate(startDate);
                 row.setEndDate(endDate);
 
-                // Schedule display
                 if (startDate != null && endDate != null) {
                     row.setSchedule(startDate.format(DATE_FORMATTER) + " to " + endDate.format(DATE_FORMATTER));
                 } else {
                     row.setSchedule("-");
                 }
 
-                // Readings counts
                 int todayRead = rs.getInt("today_reading");
+                int ydayRead = rs.getInt("yday_reading");
                 int tillYdayRead = rs.getInt("till_yday_reading");
 
-                // Invoices counts dynamically from invoice_<pid>
                 int[] invCounts = getInvoiceCounts(conn, pid, startDate, endDate);
                 int todayInv = invCounts[0];
-                int tillYdayInv = invCounts[1];
+                int ydayInv = invCounts[1];
+                int tillYdayInv = invCounts[2];
+                
+                System.out.println("Yday Read: " + ydayRead);
 
                 int totalRead = todayRead + tillYdayRead;
                 int totalInv = todayInv + tillYdayInv;
-                
-                // CORRECTED UNBILLED FORMULA: Total Data - Total Reading
                 int unbilled = (totalData != null) ? Math.max(0, totalData - totalRead) : 0;
-
-                double billedPercent = totalRead > 0 ? ((double) totalRead / totalData) * 100.0 : 0.0;
+                double billedPercent = (totalData != null && totalData > 0) ? ((double) totalRead / totalData) * 100.0 : 0.0;
 
                 row.setTodayReading(todayRead);
+                row.setYesterdayReading(ydayRead);
                 row.setTodayInv(todayInv);
+                row.setYesterdayInv(ydayInv);
                 row.setTillYdayRead(tillYdayRead);
                 row.setTillYdayInv(tillYdayInv);
                 row.setTotalReading(totalRead);
@@ -122,7 +130,6 @@ public class ReportDAO {
                 row.setUnbilled(unbilled);
                 row.setBilledPercent(Math.round(billedPercent * 100.0) / 100.0);
 
-                // Status: Completed if current date passed end date or completed status, else Running
                 if (endDate != null && today.isAfter(endDate)) {
                     row.setStatus("Completed");
                 } else if (invStatus == 1 && endDate == null) {
@@ -131,7 +138,6 @@ public class ReportDAO {
                     row.setStatus("Running");
                 }
 
-                // PerDay Target and Diff calculation
                 if (totalData != null && startDate != null && endDate != null) {
                     long totalDays = ChronoUnit.DAYS.between(startDate, endDate) + 1;
                     if (totalDays > 0) {
@@ -142,15 +148,17 @@ public class ReportDAO {
                 }
 
                 reportList.add(row);
+                System.out.println("row:" + row);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
+        System.out.println("row:" + reportList);
         return reportList;
     }
 
     private static int[] getInvoiceCounts(Connection conn, int pid, LocalDate startDate, LocalDate endDate) {
-        int[] counts = new int[]{0, 0};
+        int[] counts = new int[]{0, 0, 0};
         String targetTable = "invoice_" + pid;
 
         String checkTableSql = "SELECT COUNT(*) FROM information_schema.tables " +
@@ -163,6 +171,7 @@ public class ReportDAO {
                     StringBuilder invSql = new StringBuilder();
                     invSql.append("SELECT ")
                           .append("  SUM(CASE WHEN DATE(inv_date) = CURRENT_DATE() THEN 1 ELSE 0 END) AS today_inv, ")
+                          .append("  SUM(CASE WHEN DATE(inv_date) = CURRENT_DATE() - INTERVAL 1 DAY THEN 1 ELSE 0 END) AS yday_inv, ")
                           .append("  SUM(CASE WHEN DATE(inv_date) < CURRENT_DATE() THEN 1 ELSE 0 END) AS till_yday_inv ")
                           .append("FROM `").append(targetTable).append("` ")
                           .append("WHERE active = 1 ");
@@ -178,7 +187,8 @@ public class ReportDAO {
                          ResultSet invRs = invPst.executeQuery()) {
                         if (invRs.next()) {
                             counts[0] = invRs.getInt("today_inv");
-                            counts[1] = invRs.getInt("till_yday_inv");
+                            counts[1] = invRs.getInt("yday_inv");
+                            counts[2] = invRs.getInt("till_yday_inv");
                         }
                     }
                 }

@@ -1,5 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-
+<%@ page import="java.util.Random" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -8,7 +8,7 @@
 <style>
     body {
         font-family: Arial, sans-serif;
-        background-color: #f4f6f9;
+        background-color: rgb(2, 6, 25);
         display: flex;
         justify-content: center;
         align-items: center;
@@ -42,6 +42,17 @@
         box-sizing: border-box;
         border: 1px solid #ccc;
         border-radius: 4px;
+    }
+    .captcha-box {
+        background-color: #f1f3f5;
+        padding: 8px;
+        border-radius: 4px;
+        font-weight: bold;
+        color: #2c3e50;
+        text-align: center;
+        letter-spacing: 1px;
+        margin-bottom: 6px;
+        border: 1px dashed #cbd5e1;
     }
     .btn-submit {
         width: 100%;
@@ -101,6 +112,17 @@
         }
     %>
 
+    <%
+        // Generate random math CAPTCHA numbers (e.g. between 1 and 10)
+        Random random = new Random();
+        int num1 = random.nextInt(9) + 1;
+        int num2 = random.nextInt(9) + 1;
+        int captchaAnswer = num1 + num2;
+        
+        // Store answer in session for backend validation in LoginServlet
+        session.setAttribute("expectedCaptcha", captchaAnswer);
+    %>
+
     <form action="LoginServlet" method="POST">
         <div class="form-group">
             <label for="userId">User ID</label>
@@ -110,6 +132,12 @@
         <div class="form-group">
             <label for="pwd">Password</label>
             <input type="password" id="pwd" name="pwd" required />
+        </div>
+
+        <div class="form-group">
+            <label for="captcha">Solve the Math CAPTCHA</label>
+            <div class="captcha-box"><%= num1 %> + <%= num2 %> = ?</div>
+            <input type="number" id="captcha" name="captcha" placeholder="Enter answer" required autocomplete="off" />
         </div>
 
         <button type="submit" class="btn-submit">Login</button>

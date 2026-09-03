@@ -15,6 +15,7 @@ id="WebApp_ID" version="4.0"> -->
     <welcome-file-list>
         <welcome-file>loginpage.jsp</welcome-file>
     </welcome-file-list>
+    
 	
     <!-- 15-Minute Session Timeout Config -->
     <session-config>

@@ -28,6 +28,19 @@ public class LoginServlet extends HttpServlet {
             return;
         }
 
+        HttpSession session2 = request.getSession();
+        String userCaptchaStr = request.getParameter("captcha");
+        Integer expectedCaptcha = (Integer) session2.getAttribute("expectedCaptcha");
+
+        if (expectedCaptcha == null || userCaptchaStr == null || Integer.parseInt(userCaptchaStr) != expectedCaptcha) {
+            // CAPTCHA failed
+            request.setAttribute("errorMessage", "Invalid CAPTCHA answer. Please try again.");
+            request.getRequestDispatcher("loginpage.jsp").forward(request, response);
+            return;
+        }
+
+        // Clear the captcha session attribute so it cannot be reused
+        session2.removeAttribute("expectedCaptcha");
         // Authenticate against database via UserDAO
         boolean isValid = UserDAO.validateUser(userId.trim(), pwd.trim());
 

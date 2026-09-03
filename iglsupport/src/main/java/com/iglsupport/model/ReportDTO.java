@@ -22,6 +22,11 @@ public class ReportDTO {
     private String status;
     private Integer perDayTarget;
     private Integer diff;
+    
+    private int yesterdayReading;
+    private int yesterdayInv;
+
+   
 
     public ReportDTO() {}
 
@@ -81,4 +86,10 @@ public class ReportDTO {
 
     public Integer getDiff() { return diff; }
     public void setDiff(Integer diff) { this.diff = diff; }
+    
+    public int getYesterdayReading() { return yesterdayReading; }
+    public void setYesterdayReading(int yesterdayReading) { this.yesterdayReading = yesterdayReading; }
+
+    public int getYesterdayInv() { return yesterdayInv; }
+    public void setYesterdayInv(int yesterdayInv) { this.yesterdayInv = yesterdayInv; }
 }

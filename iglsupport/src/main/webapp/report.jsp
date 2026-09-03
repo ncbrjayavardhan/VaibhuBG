@@ -2,7 +2,6 @@
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
 <%
-    // Prevent client-side caching of authenticated pages
     response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     response.setHeader("Pragma", "no-cache");
     response.setDateHeader("Expires", 0);
@@ -67,7 +66,6 @@
             white-space: nowrap;
         }
 
-        /* Corporate navy blue theme */
         th {
             background-color: #1f4e78;
             color: #ffffff;
@@ -76,7 +74,6 @@
             position: relative;
         }
 
-        /* Header cell flex wrapper to keep label above dropdown */
         .filter-header-cell {
             display: flex;
             flex-direction: column;
@@ -91,7 +88,6 @@
             letter-spacing: 0.3px;
         }
 
-        /* Pill-shaped dropdown filter styling */
         .pill-select {
             background-color: #ffffff;
             color: #1f4e78;
@@ -112,7 +108,6 @@
             box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.4);
         }
 
-        /* Custom Dropdown Styling for Billed % with CSS Legend Boxes */
         .custom-dropdown {
             position: relative;
             display: inline-block;
@@ -169,7 +164,6 @@
             background-color: #f1f5f9;
         }
 
-        /* Legend Bar Styling */
         .legend-container {
             display: flex;
             align-items: center;
@@ -203,7 +197,6 @@
         tbody tr:nth-child(even) { background-color: #f8fafc; }
         tbody tr:hover { background-color: #eef2f7; }
 
-        /* Centered & Merged Hierarchy Cells */
         .ga-cell, .city-cell, .state-cell {
             text-align: center;
             font-weight: 600;
@@ -253,7 +246,6 @@
         </div>
     </div>
 
-    <!-- Color Range Legend Bar at the Top -->
     <div class="legend-container">
         <span><strong>Billed % Ranges:</strong></span>
         <div class="legend-item"><span class="legend-box box-low"></span> &lt; 50.00% (Low)</div>
@@ -267,7 +259,6 @@
                 <table id="reportTable">
                     <thead>
                         <tr>
-                            <!-- State Column with Dropdown -->
                             <th>
                                 <div class="filter-header-cell">
                                     <span class="filter-label">State</span>
@@ -276,8 +267,6 @@
                                     </select>
                                 </div>
                             </th>
-
-                            <!-- City Column with Dropdown -->
                             <th>
                                 <div class="filter-header-cell">
                                     <span class="filter-label">City</span>
@@ -286,8 +275,6 @@
                                     </select>
                                 </div>
                             </th>
-
-                            <!-- GA Column with Dropdown -->
                             <th>
                                 <div class="filter-header-cell">
                                     <span class="filter-label">GA</span>
@@ -296,8 +283,6 @@
                                     </select>
                                 </div>
                             </th>
-
-                            <!-- Portion Column with Dropdown -->
                             <th>
                                 <div class="filter-header-cell">
                                     <span class="filter-label">Portion</span>
@@ -306,10 +291,7 @@
                                     </select>
                                 </div>
                             </th>
-
                             <th>Total Data</th>
-
-                            <!-- Schedule Column with Dropdown -->
                             <th>
                                 <div class="filter-header-cell">
                                     <span class="filter-label">Schedule</span>
@@ -318,16 +300,15 @@
                                     </select>
                                 </div>
                             </th>
-
                             <th>Today Reading</th>
                             <th>Today Inv</th>
+                            <th>Yesterday Reading</th>
+                            <th>Yesterday Inv</th>
                             <th>Till Y'day Read</th>
                             <th>Till Y'day Inv</th>
                             <th>Total Reading</th>
                             <th>Total Inv</th>
                             <th>Unbilled</th>
-
-                            <!-- Billed % Column with Custom Dropdown & CSS Legend Boxes -->
                             <th>
                                 <div class="filter-header-cell">
                                     <span class="filter-label">Billed %</span>
@@ -348,8 +329,6 @@
                                     </div>
                                 </div>
                             </th>
-
-                            <!-- Status Column with Dropdown -->
                             <th>
                                 <div class="filter-header-cell">
                                     <span class="filter-label">Status</span>
@@ -360,7 +339,6 @@
                                     </select>
                                 </div>
                             </th>
-
                             <th>PerDay Target</th>
                             <th>Diff (Today - Target)</th>
                         </tr>
@@ -377,6 +355,8 @@
                                 data-totaldata="${item.totalData != null ? item.totalData : 0}"
                                 data-todayread="${item.todayReading}"
                                 data-todayinv="${item.todayInv}"
+                                data-ydayread="${item.yesterdayReading}"
+                                data-ydayinv="${item.yesterdayInv}"
                                 data-tillydayread="${item.tillYdayRead}"
                                 data-tillydayinv="${item.tillYdayInv}"
                                 data-totalread="${item.totalReading}"
@@ -395,6 +375,10 @@
                                 <td>${item.schedule}</td>
                                 <td>${item.todayReading}</td>
                                 <td>${item.todayInv}</td>
+                                <!-- <td>0</td>
+                                <td>0</td> -->
+                                <td>${item.yesterdayReading}</td>
+                                <td>${item.yesterdayInv}</td>
                                 <td>${item.tillYdayRead}</td>
                                 <td>${item.tillYdayInv}</td>
                                 <td>${item.totalReading}</td>
@@ -426,13 +410,14 @@
                         </c:forEach>
                     </tbody>
                     <tfoot>
-                        <!-- Total Row -->
                         <tr class="total-row">
                             <td style="text-align: center;" colspan="4">Total</td>
                             <td id="totData">-</td>
                             <td>-</td>
                             <td id="totTodayRead">0</td>
                             <td id="totTodayInv">0</td>
+                            <td id="totYdayRead">0</td>
+                            <td id="totYdayInv">0</td>
                             <td id="totTillYdayRead">0</td>
                             <td id="totTillYdayInv">0</td>
                             <td id="totTotalRead">0</td>
@@ -446,11 +431,12 @@
                             <td id="totDiff">-</td>
                         </tr>
 
-                        <!-- Variance Row (Reading - Invoice) -->
                         <tr class="diff-row">
                             <td style="text-align: center;" colspan="6">Variance (Reading - Invoice)</td>
                             <td>-</td>
                             <td id="varToday">0</td>
+                            <td>-</td>
+                            <td id="varYday">0</td>
                             <td>-</td>
                             <td id="varTillYday">0</td>
                             <td>-</td>
@@ -486,6 +472,8 @@ function initData() {
             totalData: parseInt(row.getAttribute("data-totaldata")) || 0,
             todayRead: parseInt(row.getAttribute("data-todayread")) || 0,
             todayInv: parseInt(row.getAttribute("data-todayinv")) || 0,
+            ydayRead: parseInt(row.getAttribute("data-ydayread")) || 0,
+            ydayInv: parseInt(row.getAttribute("data-ydayinv")) || 0,
             tillYdayRead: parseInt(row.getAttribute("data-tillydayread")) || 0,
             tillYdayInv: parseInt(row.getAttribute("data-tillydayinv")) || 0,
             totalRead: parseInt(row.getAttribute("data-totalread")) || 0,
@@ -506,9 +494,6 @@ function initData() {
     applyFilters();
 }
 
-/**
- * Custom Dropdown Handlers for Billed %
- */
 function toggleBilledDropdown(event) {
     event.stopPropagation();
     var menu = document.getElementById("billedDropdownMenu");
@@ -522,7 +507,6 @@ function selectBilledOption(val, labelText) {
     applyFilters();
 }
 
-// Close custom dropdown when clicking outside
 window.addEventListener("click", function(event) {
     if (!event.target.closest('.custom-dropdown')) {
         var menu = document.getElementById("billedDropdownMenu");
@@ -532,9 +516,6 @@ window.addEventListener("click", function(event) {
     }
 });
 
-/**
- * Cascading filter handlers
- */
 function onStateChange() {
     document.getElementById("cityFilter").value = "ALL";
     document.getElementById("gaFilter").value = "ALL";
@@ -700,14 +681,10 @@ function updateScheduleDropdown() {
     }
 }
 
-/**
- * Merges consecutive visible rows sharing identical State, City, and GA values
- */
 function mergeHierarchyCells() {
     var visibleRows = allRowElements.map(r => r.element)
                                     .filter(el => el.style.display !== "none");
     
-    // Reset all hierarchy cells first
     allRowElements.forEach(function(r) {
         for (var c = 0; c < 3; c++) {
             var cell = r.element.cells[c];
@@ -719,7 +696,6 @@ function mergeHierarchyCells() {
         }
     });
 
-    // 1. Merge State (col 0)
     var i = 0;
     while (i < visibleRows.length) {
         var firstRow = visibleRows[i];
@@ -739,7 +715,6 @@ function mergeHierarchyCells() {
         i = j;
     }
 
-    // 2. Merge City (col 1) within same state group
     i = 0;
     while (i < visibleRows.length) {
         var firstRow = visibleRows[i];
@@ -762,7 +737,6 @@ function mergeHierarchyCells() {
         i = j;
     }
 
-    // 3. Merge GA (col 2) within same city group
     i = 0;
     while (i < visibleRows.length) {
         var firstRow = visibleRows[i];
@@ -797,6 +771,8 @@ function applyFilters() {
     var sumTotalData = 0;
     var sumTodayRead = 0;
     var sumTodayInv = 0;
+    var sumYdayRead = 0;
+    var sumYdayInv = 0;
     var sumTillYdayRead = 0;
     var sumTillYdayInv = 0;
     var sumTotalRead = 0;
@@ -828,6 +804,8 @@ function applyFilters() {
             sumTotalData += row.totalData;
             sumTodayRead += row.todayRead;
             sumTodayInv += row.todayInv;
+            sumYdayRead += row.ydayRead;
+            sumYdayInv += row.ydayInv;
             sumTillYdayRead += row.tillYdayRead;
             sumTillYdayInv += row.tillYdayInv;
             sumTotalRead += row.totalRead;
@@ -846,20 +824,19 @@ function applyFilters() {
         }
     });
 
-    // Run dynamic merge on visible rows
     mergeHierarchyCells();
 
-    // Update Totals
     document.getElementById("totData").innerText = sumTotalData > 0 ? sumTotalData : "-";
     document.getElementById("totTodayRead").innerText = sumTodayRead;
     document.getElementById("totTodayInv").innerText = sumTodayInv;
+    document.getElementById("totYdayRead").innerText = sumYdayRead;
+    document.getElementById("totYdayInv").innerText = sumYdayInv;
     document.getElementById("totTillYdayRead").innerText = sumTillYdayRead;
     document.getElementById("totTillYdayInv").innerText = sumTillYdayInv;
     document.getElementById("totTotalRead").innerText = sumTotalRead;
     document.getElementById("totTotalInv").innerText = sumTotalInv;
     document.getElementById("totUnbilled").innerText = sumUnbilled;
 
-    // Footer Billed % formula: (Total Readings / Total Data) * 100
     var totalBilledPct = sumTotalData > 0 ? ((sumTotalRead / sumTotalData) * 100.0) : 0.0;
     document.getElementById("totBilledPct").innerText = totalBilledPct.toFixed(2) + "%";
 
@@ -875,8 +852,8 @@ function applyFilters() {
         totDiffElem.innerText = "-";
     }
 
-    // Update Variance (Reading - Invoice)
     document.getElementById("varToday").innerText = sumTodayRead - sumTodayInv;
+    document.getElementById("varYday").innerText = sumYdayRead - sumYdayInv;
     document.getElementById("varTillYday").innerText = sumTillYdayRead - sumTillYdayInv;
     document.getElementById("varTotal").innerText = sumTotalRead - sumTotalInv;
 }
